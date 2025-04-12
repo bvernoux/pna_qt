@@ -28,13 +28,6 @@ jobs:
               artifact_name: "pna_qt-windows-msvc"
             }
           - {
-              name: "Windows MinGW",
-              os: windows-latest,
-              compiler: "mingw",
-              qt_arch: "win64_mingw",
-              artifact_name: "pna_qt-windows-mingw"
-            }
-          - {
               name: "Linux GCC",
               os: ubuntu-latest,
               compiler: "gcc",
@@ -65,14 +58,7 @@ jobs:
     - name: Set up MSVC
       if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'msvc'
       uses: ilammy/msvc-dev-cmd@v1
-    
-    # Set up MinGW environment
-    - name: Set up MinGW
-      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'mingw'
-      uses: egor-tensin/setup-mingw@v2
-      with:
-        platform: x64
-    
+
     # Install Qt on Windows
     - name: Install Qt on Windows
       if: matrix.config.os == 'windows-latest'
@@ -94,19 +80,7 @@ jobs:
         mkdir deploy
         copy release\pna_qt.exe deploy\
         windeployqt --release --no-translations --no-system-d3d-compiler deploy\pna_qt.exe
-    
-    # Windows MinGW Build
-    - name: Build with MinGW
-      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'mingw'
-      shell: cmd
-      run: |
-        set PATH=%PATH%;%Qt6_DIR%\bin
-        qmake pna_qt.pro CONFIG+=release
-        mingw32-make
-        mkdir deploy
-        copy release\pna_qt.exe deploy\
-        windeployqt --release --no-translations --no-system-d3d-compiler deploy\pna_qt.exe
-    
+
     # Linux Build
     - name: Build on Linux
       if: matrix.config.os == 'ubuntu-latest'
