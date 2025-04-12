@@ -1,0 +1,131 @@
+name: Build pna_qt
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      qt_version:
+        description: 'Qt version to use'
+        required: true
+        default: '6.9.0'
+
+jobs:
+  build:
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - {
+              name: "Windows MSVC",
+              os: windows-latest,
+              compiler: "msvc",
+              qt_arch: "win64_msvc2019_64",
+              artifact_name: "pna_qt-windows-msvc"
+            }
+          - {
+              name: "Windows MinGW",
+              os: windows-latest,
+              compiler: "mingw",
+              qt_arch: "win64_mingw",
+              artifact_name: "pna_qt-windows-mingw"
+            }
+          - {
+              name: "Linux GCC",
+              os: ubuntu-latest,
+              compiler: "gcc",
+              qt_arch: "gcc_64",
+              artifact_name: "pna_qt-linux-gcc"
+            }
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    
+    # Install dependencies for Linux
+    - name: Install Linux dependencies
+      if: matrix.config.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgl1-mesa-dev \
+          libxkbcommon-x11-0 \
+          libpulse-dev \
+          libxcb-cursor0
+    
+    # Set up MSVC environment
+    - name: Set up MSVC
+      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'msvc'
+      uses: ilammy/msvc-dev-cmd@v1
+    
+    # Set up MinGW environment
+    - name: Set up MinGW
+      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'mingw'
+      uses: egor-tensin/setup-mingw@v2
+      with:
+        platform: x64
+    
+    # Determine Qt version
+    - name: Set Qt version
+      id: qt_version
+      run: |
+        QT_VERSION="${{ github.event.inputs.qt_version }}"
+        if [ -z "$QT_VERSION" ]; then
+          QT_VERSION="6.9.0"
+        fi
+        echo "qt_version=$QT_VERSION" >> $GITHUB_OUTPUT
+      shell: bash
+    
+    # Install Qt
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: ${{ steps.qt_version.outputs.qt_version }}
+        arch: ${{ matrix.config.qt_arch }}
+        modules: qtsvg qtprintsupport
+        tools: ${{ matrix.config.compiler == 'mingw' && 'tools_mingw' || '' }}
+    
+    # Windows MSVC Build
+    - name: Build with MSVC
+      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'msvc'
+      shell: cmd
+      run: |
+        qmake pna_qt.pro CONFIG+=release
+        nmake
+        mkdir deploy
+        copy release\pna_qt.exe deploy\
+        windeployqt --release --no-translations --no-system-d3d-compiler deploy\pna_qt.exe
+    
+    # Windows MinGW Build
+    - name: Build with MinGW
+      if: matrix.config.os == 'windows-latest' && matrix.config.compiler == 'mingw'
+      shell: cmd
+      run: |
+        set PATH=%PATH%;%Qt6_DIR%\bin
+        qmake pna_qt.pro CONFIG+=release
+        mingw32-make
+        mkdir deploy
+        copy release\pna_qt.exe deploy\
+        windeployqt --release --no-translations --no-system-d3d-compiler deploy\pna_qt.exe
+    
+    # Linux Build
+    - name: Build on Linux
+      if: matrix.config.os == 'ubuntu-latest'
+      run: |
+        qmake pna_qt.pro CONFIG+=release
+        make -j$(nproc)
+        mkdir -p deploy
+        cp pna_qt deploy/
+    
+    # Upload artifacts
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.config.artifact_name }}
+        path: deploy/
