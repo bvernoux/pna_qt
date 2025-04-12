@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Creative Phase Noise Analyzer (PNA) Logo
+  Concept: An energetic, layered design with a digital glitch-inspired waveform,
+  complemented by modern typography.
+-->
+<svg width="256" height="256" version="1.1" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <!-- Define gradients and filters -->
+ <defs>
+  <!-- Radial gradient with multi-stop for a dynamic background -->
+  <radialGradient id="dynamicGradient" cx="128" cy="128" r="168" gradientUnits="userSpaceOnUse">
+   <stop stop-color="#1E90FF" offset="0"/>
+   <stop stop-color="#104E8B" offset=".5"/>
+   <stop stop-color="#000428" offset="1"/>
+  </radialGradient>
+  <!-- Angular lines pattern -->
+  <pattern id="angularLines" width="10" height="10" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+   <line y2="10" stroke="#fff" stroke-opacity=".1" stroke-width="2"/>
+  </pattern>
+  <!-- Combined background filter -->
+ </defs>
+ <!-- Background circle with gradient and angular lines overlay -->
+ <circle cx="128" cy="128" r="120" fill="url(#dynamicGradient)"/>
+ <!-- Abstract glitch-inspired waveform -->
+ <path d="m20 140c40-80 80 60 116 0s76-60 116 0" fill="none" opacity=".9" stroke="#fff" stroke-linecap="round" stroke-width="6"/>
+ <!-- Layer of fragmented waveform elements -->
+ <path d="m30 130 20-10 20 15 20-10 20 15 20-10 20 15 20-10 20 15 20-10 20 15" fill="none" opacity=".5" stroke="#fff" stroke-linecap="round" stroke-width="3"/>
+ <!-- Central Emblem "PNA" with modern digital typography -->
+ <text transform="scale(.96712 1.034)" x="126.63094" y="85.618477" fill="#ffffff" font-family="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" font-size="68.168px" font-weight="700" opacity=".95" stroke-width="1.4202" text-anchor="middle">PNA</text>
+ <!-- Outer subtle circle for framing -->
+ <circle cx="128" cy="128" r="118" fill="none" opacity=".3" stroke="#fff" stroke-width="2"/>
+</svg>

@@ -1,0 +1,10 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/fonts">
+    <file>LiberationSans-Regular.ttf</file>
+    <file>LiberationMono-Regular.ttf</file>
+  </qresource>
+  <qresource prefix="/">
+    <file>images/pna.svg</file>
+  </qresource>
+</RCC>
