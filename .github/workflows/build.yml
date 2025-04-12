@@ -10,7 +10,7 @@ on:
       qt_version:
         description: 'Qt version to use'
         required: true
-        default: '6.9.0'
+        default: '6.5.3'
 
 jobs:
   build:
@@ -57,7 +57,9 @@ jobs:
           libgl1-mesa-dev \
           libxkbcommon-x11-0 \
           libpulse-dev \
-          libxcb-cursor0
+          libxcb-cursor0 \
+          qt6-base-dev \
+          qt6-svg-dev
     
     # Set up MSVC environment
     - name: Set up MSVC
@@ -71,24 +73,15 @@ jobs:
       with:
         platform: x64
     
-    # Determine Qt version
-    - name: Set Qt version
-      id: qt_version
-      run: |
-        QT_VERSION="${{ github.event.inputs.qt_version }}"
-        if [ -z "$QT_VERSION" ]; then
-          QT_VERSION="6.9.0"
-        fi
-        echo "qt_version=$QT_VERSION" >> $GITHUB_OUTPUT
-      shell: bash
-    
-    # Install Qt
-    - name: Install Qt
+    # Install Qt on Windows
+    - name: Install Qt on Windows
+      if: matrix.config.os == 'windows-latest'
       uses: jurplel/install-qt-action@v3
       with:
-        version: ${{ steps.qt_version.outputs.qt_version }}
-        arch: ${{ matrix.config.qt_arch }}
-        modules: qtsvg qtprintsupport
+        version: '6.5.3'
+        host: 'windows'
+        target: 'desktop'
+        arch: ${{ matrix.config.compiler == 'msvc' && 'win64_msvc2019_64' || 'win64_mingw' }}
         tools: ${{ matrix.config.compiler == 'mingw' && 'tools_mingw' || '' }}
     
     # Windows MSVC Build
@@ -118,7 +111,8 @@ jobs:
     - name: Build on Linux
       if: matrix.config.os == 'ubuntu-latest'
       run: |
-        qmake pna_qt.pro CONFIG+=release
+        export QT_SELECT=qt6
+        qmake6 pna_qt.pro CONFIG+=release
         make -j$(nproc)
         mkdir -p deploy
         cp pna_qt deploy/
