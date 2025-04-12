@@ -39,7 +39,6 @@ It is fully tested and compatible with native csv files from the amazing PN2060C
   * Export the calculated spot noise data (from the first visible dataset) to a CSV file.
 * **Command Line Interface:**
   * Load initial CSV file(s) (`-i` or `--input`, can be used multiple times).
-  * Specify default output plot filename (`-o` or `--output`).
   * Enable dark theme on startup (`--dark-theme`).
   * Set output image DPI (`--dpi`).
   * Optionally disable plotting reference noise by default (`--noplotref`).
