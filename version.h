@@ -1,10 +1,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#define VER_DATE_INFO_STR        " - 12-Apr-2025"
+#define VER_DATE_INFO_STR        " - 04-May-2025"
 
-#define VER_FILEVERSION          1,0,0,0
-#define VER_FILEVERSION_STR      "1.0.0.0\0"
+#define VER_FILEVERSION          1,0,0,1
+#define VER_FILEVERSION_STR      "1.0.0.1\0"
 
 #define VER_PRODUCTVERSION       VER_FILEVERSION
 #define VER_PRODUCTVERSION_STR   VER_FILEVERSION_STR

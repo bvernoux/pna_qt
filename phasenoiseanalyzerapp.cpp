@@ -19,8 +19,8 @@
 ****************************************************************************
 **           Author: Benjamin VERNOUX                                     **
 **          Contact: https://github.com/bvernoux                          **
-**             Date: 12 Apr 2025                                          **
-**          Version: 1.0.0                                                **
+**             Date: 04 May 2025                                          **
+**          Version: 1.0.0.1                                              **
 ****************************************************************************/
 #include "phasenoiseanalyzerapp.h"
 #include "constants.h"
@@ -394,6 +394,7 @@ void PhaseNoiseAnalyzerApp::createPlotArea()
 	// Connect plot signals
 	connect(m_plot, &QCustomPlot::mouseMove, this, &PhaseNoiseAnalyzerApp::onPlotMouseMove);
 	connect(m_plot, &QCustomPlot::mousePress, this, &PhaseNoiseAnalyzerApp::onPlotMousePress);
+	connect(m_plot->yAxis, SIGNAL(rangeChanged(QCPRange)), this, SLOT(synchronizeYAxes(QCPRange)));
 
 	// Initialize plot appearance (will be updated in initPlot/applyTheme)
 	initPlot();
@@ -581,6 +582,13 @@ void PhaseNoiseAnalyzerApp::initPlot()
 	m_plot->plotLayout()->simplify(); // Recalculate grid layout structure
 
 	m_plot->replot();
+}
+
+void PhaseNoiseAnalyzerApp::synchronizeYAxes(const QCPRange &range)
+{
+	// Update the right y-axis to match the left y-axis
+	m_plot->yAxis2->setRange(range);
+	m_plot->replot(); // Ensure both axes are redrawn
 }
 
 void PhaseNoiseAnalyzerApp::updatePlot()

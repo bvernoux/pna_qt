@@ -19,8 +19,8 @@
 ****************************************************************************
 **           Author: Benjamin VERNOUX                                     **
 **          Contact: https://github.com/bvernoux                          **
-**             Date: 12 Apr 2025                                          **
-**          Version: 1.0.0                                                **
+**             Date: 04 May 2025                                          **
+**          Version: 1.0.0.1                                              **
 ****************************************************************************/
 
 #ifndef PHASENOISEANALYZERAPP_H
@@ -224,6 +224,7 @@ private slots:
 	// Toolbar Actions
 	void homeView();
 	void panzoomButtonClicked(bool checked);
+
 	// Legend/Dataset Actions
 	void onLegendItemClicked(QCPLegend *legend, QCPAbstractLegendItem *item, QMouseEvent *event);
 	void showPlotContextMenu(const QPoint &pos);
@@ -233,13 +234,15 @@ private slots:
 	// Plot Interaction Slots
 	void onPlotMouseMove(QMouseEvent* event);
 	void onPlotMousePress(QMouseEvent* event);
-	// void onPlotMouseWheel(QWheelEvent* event); // Optional for zooming
 
 	// Utility Slots
 	void forceOddWindowSize(int value);
 
 	//positionSpotNoiseTable
 	void positionSpotNoiseTable(void);
+
+	// Synchronizes right y-axis with left y-axis during range changes
+	void synchronizeYAxes(const QCPRange &range);
 
 private:
 	void setupUi();
