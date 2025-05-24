@@ -139,6 +139,7 @@ Launch the executable.
 * **Toolbar:** Quick access to common actions (Open, Save, Theme, Tools, Home View, Pan/Zoom).
 
 * **Plot Controls Panel (Dock Widget):**
+  * Active Curve dropdown list to select the active curve (used for Spot Noise Points/Spot Noise Table/Crosshair).
   * Adjust Y-axis (Phase Noise) range limits.
   * Adjust X-axis (Frequency) range limits using sliders corresponding to standard decades.
   * Checkboxes for toggling Reference Noise, Spot Noise (Points/Table), Grid, Dark Theme, Spur Removal.

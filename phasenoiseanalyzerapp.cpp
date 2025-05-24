@@ -19,8 +19,8 @@
 ****************************************************************************
 **           Author: Benjamin VERNOUX                                     **
 **          Contact: https://github.com/bvernoux                          **
-**             Date: 04 May 2025                                          **
-**          Version: 1.0.0.1                                              **
+**             Date: 24 May 2025                                          **
+**          Version: 1.0.1.0                                              **
 ****************************************************************************/
 #include "phasenoiseanalyzerapp.h"
 #include "constants.h"
@@ -148,6 +148,7 @@ PhaseNoiseAnalyzerApp::PhaseNoiseAnalyzerApp(const QStringList& csvFilenames,
 
 	// Initialize spot noise colors based on initial theme
 	m_spotNoiseColor = m_useDarkTheme ? m_defaultSpotNoiseColorDark : m_defaultSpotNoiseColorLight;
+	m_activeDatasetIndex = -1; // Initialize active dataset index
 
 	setupUi();
 	applyTheme(); // Apply initial theme
@@ -170,6 +171,8 @@ PhaseNoiseAnalyzerApp::PhaseNoiseAnalyzerApp(const QStringList& csvFilenames,
 			initPlot(); // Show empty plot if no data
 		}
 	}
+	// Ensure combo box is updated even if no files were loaded
+	updateActiveCurveCombo();
 
 	// Setup timer for delayed maximization
 	m_startupTimer = new QTimer(this);
@@ -681,7 +684,11 @@ void PhaseNoiseAnalyzerApp::updatePlot()
 
 		QString filterPart = m_filteringEnabled ? QString(" | Filter: %1(W=%2)").arg(m_filterTypeCombo->currentText()).arg(m_filterWindowSpin->value()) : "";
 		QString spurPart = m_spurRemovalEnabled ? " | SpurRem:On" : "";
-		m_subtitleText->setText(QString("%1 (%2)%3%4").arg(filenamePart).arg(timestampPart.isEmpty() ? "N/A" : timestampPart).arg(filterPart).arg(spurPart));
+		if(timestampPart.isEmpty() == false) {
+			m_subtitleText->setText(QString("%1 (%2)%3%4").arg(filenamePart).arg(timestampPart).arg(filterPart).arg(spurPart));
+		} else {
+			m_subtitleText->setText(QString("%1 %2%3").arg(filenamePart).arg(filterPart).arg(spurPart));
+		}
 		m_subtitleText->setTextColor(textColor);
 		m_subtitleText->setTextFlags(Qt::AlignHCenter | Qt::AlignTop);
 		m_subtitleText->setMargins(QMargins(0, 0, 0, 4));
@@ -713,8 +720,7 @@ void PhaseNoiseAnalyzerApp::updatePlot()
 	yAxis2->setTicker(fixedTickerY2_upd); yAxis2->setNumberFormat("f"); yAxis2->setNumberPrecision(0);
 
 	// --- Plot Data for Each Dataset ---
-	bool isFirstVisible = true;
-	QCPGraph* firstVisibleMeasuredGraph = nullptr;
+	QCPGraph* firstVisibleMeasuredGraph = nullptr; // Still needed for generic operations or if active index is invalid
 
 	for (PlotData& data : m_datasets) {
 		// Create/Update Graphs for this dataset
@@ -743,9 +749,8 @@ void PhaseNoiseAnalyzerApp::updatePlot()
 			}
 			// Do NOT call data.graphMeasured->addToLegend();
 
-			if (data.isVisible && isFirstVisible) {
+			if (data.isVisible && !firstVisibleMeasuredGraph) { // Capture the very first one
 				firstVisibleMeasuredGraph = data.graphMeasured;
-				isFirstVisible = false;
 			}
 		}
 
@@ -855,8 +860,18 @@ void PhaseNoiseAnalyzerApp::updatePlot()
 	}
 
 	// --- Calculate and Draw Spot Noise Points/Labels ---
-	calculateSpotNoise(); // Calculates based on first visible dataset
-	if (m_showSpotNoise && firstVisibleMeasuredGraph) { // Use the first visible graph pointer
+	calculateSpotNoise(); // Calculates based on the active dataset (internally)
+
+	// The graph to attach spot noise items to is the active dataset's graph
+	QCPGraph* spotNoiseTargetGraph = nullptr;
+	if (m_activeDatasetIndex >= 0 && m_activeDatasetIndex < m_datasets.size()) {
+		// Ensure the active dataset is also visible and has a graph
+		if (m_datasets[m_activeDatasetIndex].isVisible && m_datasets[m_activeDatasetIndex].graphMeasured) {
+			spotNoiseTargetGraph = m_datasets[m_activeDatasetIndex].graphMeasured;
+		}
+	}
+
+	if (m_showSpotNoise && spotNoiseTargetGraph) { // Use the active dataset's graph
 		QCPLayer *overlayLayer = m_plot->layer("overlay");
 		if (!overlayLayer) overlayLayer = m_plot->layer("main");
 		for (auto it = m_spotNoiseData.constBegin(); it != m_spotNoiseData.constEnd(); ++it) {
@@ -866,7 +881,7 @@ void PhaseNoiseAnalyzerApp::updatePlot()
 
 			QCPItemTracer* tracer = new QCPItemTracer(m_plot);
 			if (overlayLayer) tracer->setLayer(overlayLayer);
-			tracer->setGraph(firstVisibleMeasuredGraph); // Attach tracer to the correct graph
+			tracer->setGraph(spotNoiseTargetGraph); // Attach tracer to the active graph
 			tracer->setGraphKey(actualFreq);
 			tracer->setInterpolating(true); // Ensure it interpolates if key not exact
 			tracer->setStyle(QCPItemTracer::tsCircle);
@@ -925,6 +940,19 @@ void PhaseNoiseAnalyzerApp::createToolPanels()
 	m_plotLayout = new QVBoxLayout(m_plotWidget);
 	m_plotLayout->setAlignment(Qt::AlignTop); // Keep controls packed at the top
 
+	// --- Active Curve group ---
+	QGroupBox* activeCurveGroup = new QGroupBox("Active Curve:");
+	QFormLayout* activeCurveLayout = new QFormLayout(activeCurveGroup);
+
+	// --- Active Curve Selection ---
+	m_activeCurveCombo = new QComboBox();
+	m_activeCurveCombo->setToolTip("Select the active curve for spot noise calculation and other operations.");
+	m_activeCurveCombo->setEnabled(false); // Initially disabled
+	m_activeCurveCombo->setMinimumWidth(80);
+	connect(m_activeCurveCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &PhaseNoiseAnalyzerApp::onActiveCurveChanged);
+	activeCurveLayout->addRow("", m_activeCurveCombo);
+	m_plotLayout->addWidget(activeCurveGroup);
+
 	// --- Y-axis range controls ---
 	QGroupBox* yRangeGroup = new QGroupBox("SSB Phase Noise Range");
 	QFormLayout* yRangeLayout = new QFormLayout(yRangeGroup);
@@ -949,6 +977,8 @@ void PhaseNoiseAnalyzerApp::createToolPanels()
 	// --- Frequency range sliders group ---
 	QGroupBox* freqSliderGroup = new QGroupBox("Frequency Offset Range");
 	QFormLayout* freqSliderLayout = new QFormLayout(freqSliderGroup);
+
+	// --- Frequency Sliders ---
 	m_minFreqSlider = new QSlider(Qt::Horizontal);
 	m_minFreqSlider->setRange(0, Constants::FREQ_POINTS.size() - 1);
 	m_minFreqSlider->setValue(m_minFreqSliderIndex);
@@ -1246,6 +1276,9 @@ void PhaseNoiseAnalyzerApp::loadData(const QString& filename)
 	// Update UI components
 	updatePlot(); // Update plot with new data
 
+	// Update the active curve combo box, which might trigger another updatePlot via onActiveCurveChanged
+	updateActiveCurveCombo();
+
 	// Update window title based on loaded files
 	if (m_datasets.size() == 1) {
 		setWindowTitle(QString("Phase Noise Analyzer - %1").arg(QFileInfo(filename).fileName()));
@@ -1257,6 +1290,65 @@ void PhaseNoiseAnalyzerApp::loadData(const QString& filename)
 		QFileInfo fileInfo(filename);
 		m_outputFilename = fileInfo.path() + "/" + fileInfo.completeBaseName() + ".png";
 	}
+}
+
+void PhaseNoiseAnalyzerApp::updateActiveCurveCombo()
+{
+	if (!m_activeCurveCombo) return;
+
+	m_activeCurveCombo->blockSignals(true);
+
+	QString previouslySelectedDisplayName;
+	if (m_activeDatasetIndex >= 0 && m_activeDatasetIndex < m_datasets.size()) {
+		previouslySelectedDisplayName = m_datasets[m_activeDatasetIndex].displayName;
+	}
+
+	m_activeCurveCombo->clear();
+
+	if (m_datasets.isEmpty()) {
+		m_activeCurveCombo->setEnabled(false);
+		// m_activeDatasetIndex will be set to -1 by onActiveCurveChanged
+	} else {
+		for (const PlotData& data : m_datasets) {
+			m_activeCurveCombo->addItem(data.displayName);
+		}
+		m_activeCurveCombo->setEnabled(true);
+
+		int comboIndexToReselect = -1;
+		if (!previouslySelectedDisplayName.isEmpty()) {
+			comboIndexToReselect = m_activeCurveCombo->findText(previouslySelectedDisplayName);
+		}
+
+		if (comboIndexToReselect != -1) {
+			m_activeCurveCombo->setCurrentIndex(comboIndexToReselect);
+		} else { // Previously selected not found or no previous selection
+			m_activeCurveCombo->setCurrentIndex(0); // Select the first one
+		}
+	}
+	m_activeCurveCombo->blockSignals(false);
+
+	// Manually trigger the handler for the (potentially new) current index.
+	// This ensures m_activeDatasetIndex is correctly updated and plot refreshes.
+	if (m_activeCurveCombo->currentIndex() != -1) {
+		onActiveCurveChanged(m_activeCurveCombo->currentIndex());
+	} else if (m_datasets.isEmpty()) {
+		// This ensures m_activeDatasetIndex becomes -1 and plot updates
+		onActiveCurveChanged(-1);
+	}
+}
+
+void PhaseNoiseAnalyzerApp::onActiveCurveChanged(int comboBoxIndex)
+{
+	if (!m_activeCurveCombo) {
+		m_activeDatasetIndex = -1;
+	} else if (m_datasets.isEmpty() || comboBoxIndex < 0 || comboBoxIndex >= m_activeCurveCombo->count()) {
+		m_activeDatasetIndex = -1;
+	} else {
+		// Assuming comboBoxIndex directly maps to m_datasets index as items are added sequentially
+		m_activeDatasetIndex = comboBoxIndex;
+		qInfo() << "Active curve changed to:" << m_datasets[m_activeDatasetIndex].displayName;
+	}
+	updatePlot(); // Always update plot after active curve change
 }
 
 int PhaseNoiseAnalyzerApp::findClosestFreqStepIndex(double freq) {
@@ -1777,24 +1869,24 @@ void PhaseNoiseAnalyzerApp::applySpurRemoval() {
 void PhaseNoiseAnalyzerApp::calculateSpotNoise()
 {
 	m_spotNoiseData.clear();
-	if (m_datasets.isEmpty()) return;
 
-	// Find the *first visible* dataset for spot noise calculation
-	const PlotData* firstVisibleData = nullptr;
-	for(const auto& data : m_datasets) {
-		if (data.isVisible && data.graphMeasured && !data.frequencyOffset.isEmpty()) {
-			firstVisibleData = &data;
-			break;
+	// Use the active dataset if one is selected and valid
+	const PlotData* activeData = nullptr;
+	if (m_activeDatasetIndex >= 0 && m_activeDatasetIndex < m_datasets.size()) {
+		if (m_datasets[m_activeDatasetIndex].isVisible &&
+			m_datasets[m_activeDatasetIndex].graphMeasured &&
+			!m_datasets[m_activeDatasetIndex].frequencyOffset.isEmpty()) {
+			activeData = &m_datasets[m_activeDatasetIndex];
 		}
 	}
 
-	if (!firstVisibleData) {
-		qWarning() << "calculateSpotNoise: No visible dataset found to calculate spot noise from.";
-		return; // No visible data to calculate from
+	if (!activeData) {
+		qWarning() << "calculateSpotNoise: No active, visible, or valid dataset found to calculate spot noise from.";
+		return; // No valid data to calculate from
 	}
 
-	// Use the data currently plotted in the first visible measured graph
-	QSharedPointer<QCPGraphDataContainer> dataContainer = firstVisibleData->graphMeasured->data();
+	// Use the data currently plotted in the active graph
+	QSharedPointer<QCPGraphDataContainer> dataContainer = activeData->graphMeasured->data();
 
 	// Get current view range
 	double xMinView = m_plot->xAxis->range().lower;
@@ -2210,10 +2302,11 @@ void PhaseNoiseAnalyzerApp::removeSelectedDataset()
 		// Pointers are implicitly cleared by removeGraph and will be null in the struct after removal anyway
 
 		// Remove the data from our internal list
-		m_datasets.removeAt(indexToRemove);
+		m_datasets.removeAt(indexToRemove); // This invalidates m_activeDatasetIndex if it was >= indexToRemove
+		updateActiveCurveCombo(); // Update combo and m_activeDatasetIndex, then calls updatePlot
 
 		// Update everything else
-		updatePlot(); // Redraw plot without the removed graphs/legend items
+		// updatePlot() is called by updateActiveCurveCombo -> onActiveCurveChanged
 
 		// Update window title if needed
 		if (m_datasets.isEmpty()) {
@@ -2245,7 +2338,8 @@ void PhaseNoiseAnalyzerApp::onPlotMouseMove(QMouseEvent* event) {
 								 .arg(Utils::formatFrequencyValue(x))
 								 .arg(y, 0, 'f', 2));
 
-	// Find the first visible measured graph
+	// Find the first visible measured graph (for crosshair behavior - might change if crosshair should follow active curve)
+	// Use the active curve for the crosshair, if valid and visible
 	QCPGraph* targetGraph = nullptr;
 	for (const auto& data : m_datasets) {
 		if (data.isVisible && data.graphMeasured) {
@@ -2253,7 +2347,12 @@ void PhaseNoiseAnalyzerApp::onPlotMouseMove(QMouseEvent* event) {
 			break;
 		}
 	}
-
+	if (m_activeDatasetIndex >= 0 && m_activeDatasetIndex < m_datasets.size()) {
+		const PlotData& activeData = m_datasets[m_activeDatasetIndex];
+		if (activeData.isVisible && activeData.graphMeasured) {
+			targetGraph = activeData.graphMeasured;
+		}
+	}
 	// Handle crosshair
 	if (m_useCrosshair && targetGraph) {
 		// Find the closest data point on the *measured* graph to the mouse cursor's x-coordinate
@@ -2469,10 +2568,16 @@ void PhaseNoiseAnalyzerApp::onOpenFile()
 		for(auto item : std::as_const(m_spotNoiseLabels)) { if (item) m_plot->removeItem(item); } m_spotNoiseLabels.clear();
 		// Keep user preference for reference plotting if possible
 		m_plotReferenceDefault = m_toggleReferenceAction->isChecked();
+		m_activeDatasetIndex = -1; // Reset active index before loading new data
+
 
 		for (const QString& filename : filenames) {
 			loadData(filename);
 		}
+		// After all files are processed, ensure the combo box reflects the final state.
+		// loadData calls updateActiveCurveCombo, so this should be handled.
+		// If m_datasets is still empty, updateActiveCurveCombo will disable the combo.
+		// If m_datasets is populated, updateActiveCurveCombo will select an item.
 	}
 }
 

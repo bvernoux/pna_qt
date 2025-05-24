@@ -19,8 +19,8 @@
 ****************************************************************************
 **           Author: Benjamin VERNOUX                                     **
 **          Contact: https://github.com/bvernoux                          **
-**             Date: 04 May 2025                                          **
-**          Version: 1.0.0.1                                              **
+**             Date: 24 May 2025                                          **
+**          Version: 1.0.1.0                                              **
 ****************************************************************************/
 
 #ifndef PHASENOISEANALYZERAPP_H
@@ -83,7 +83,7 @@ public:
 		int originalTickCount = ticks.size(); // Store original count
 
 		if (!ticks.isEmpty()) { // Avoid processing if base class returned nothing
-            for (double tick : std::as_const(ticks)) {
+			for (double tick : std::as_const(ticks)) {
 				// Check positivity for log calculation, handle near-zero carefully
 				if (tick > epsilon) {
 					double log10Tick = std::log10(tick);
@@ -237,6 +237,7 @@ private slots:
 
 	// Utility Slots
 	void forceOddWindowSize(int value);
+	void onActiveCurveChanged(int index);
 
 	//positionSpotNoiseTable
 	void positionSpotNoiseTable(void);
@@ -246,6 +247,7 @@ private slots:
 
 private:
 	void setupUi();
+	void updateActiveCurveCombo();
 	void createMenus();
 	void createToolbars();
 	void createPlotArea();
@@ -274,6 +276,7 @@ private:
 
 	// Data Storage for Multiple Datasets
 	QList<PlotData> m_datasets;
+	int m_activeDatasetIndex = -1; // Index of the active dataset in m_datasets
 
 	QVector<double> m_frequencyOffsetFiltered;
 	QVector<double> m_phaseNoiseFiltered;
@@ -365,6 +368,7 @@ private:
 	QDockWidget* m_plotDock = nullptr;
 	QWidget* m_plotWidget = nullptr;
 	QVBoxLayout* m_plotLayout = nullptr;
+	QComboBox* m_activeCurveCombo = nullptr;
 
 	// Controls within Dock
 	QDoubleSpinBox* m_yMinSpin = nullptr;

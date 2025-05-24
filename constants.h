@@ -19,8 +19,8 @@
 ****************************************************************************
 **           Author: Benjamin VERNOUX                                     **
 **          Contact: https://github.com/bvernoux                          **
-**             Date: 12 Apr 2025                                          **
-**          Version: 1.0.0                                                **
+**             Date: 24 May 2025                                          **
+**          Version: 1.0.1.0                                              **
 ****************************************************************************/
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
@@ -39,7 +39,7 @@ constexpr int DEFAULT_SPUR_WINDOW_SIZE = 21;
 
 // Y-axis limits constants
 constexpr double Y_AXIS_MIN = -200.0;
-constexpr double Y_AXIS_MAX = 0.0;
+constexpr double Y_AXIS_MAX = 10.0;
 constexpr double Y_AXIS_DEFAULT_MIN = -200.0;
 constexpr double Y_AXIS_DEFAULT_MAX = -50.0;
 constexpr double Y_AXIS_MAJOR_TICK = 10.0;
